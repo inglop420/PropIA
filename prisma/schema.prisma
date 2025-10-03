@@ -1,0 +1,152 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/propia/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  name              String?
+  email             String   @unique
+  emailVerified     DateTime?
+  image             String?
+  phone             String?
+  password          String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  accounts          Account[]
+  sessions          Session[]
+  propiedades       Propiedad[]
+  leads             Lead[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model Propiedad {
+  id                  String   @id @default(cuid())
+  asesorId            String
+  titulo              String
+  descripcion         String   @db.Text
+  precio              Float
+  ciudad              String
+  estado              String
+  colonia             String
+  tipo                String
+  superficie          Float
+  habitaciones        Int
+  banos               Int
+  estacionamiento     Int
+  amenidades          Json     @default("[]")
+  plantas             Int
+  estadoPropiedad     String   @default("activa")
+  vistas              Int      @default(0)
+  fechaPublicacion    DateTime @default(now())
+  imagenes            Json     @default("[]")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  asesor              User     @relation(fields: [asesorId], references: [id], onDelete: Cascade)
+  leads               Lead[]
+
+  @@index([asesorId])
+  @@index([estadoPropiedad])
+  @@index([tipo])
+  @@index([ciudad])
+  @@map("propiedades")
+}
+
+model Lead {
+  id                  String   @id @default(cuid())
+  propiedadId         String
+  asesorId            String
+  nombreCliente       String
+  email               String
+  telefono            String
+  mensaje             String?  @db.Text
+  estadoPipeline      String   @default("nuevo")
+  fechaContacto       DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  propiedad           Propiedad @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
+  asesor              User      @relation(fields: [asesorId], references: [id], onDelete: Cascade)
+  notas               Nota[]
+  recordatorios       Recordatorio[]
+
+  @@index([asesorId])
+  @@index([propiedadId])
+  @@index([estadoPipeline])
+  @@map("leads")
+}
+
+model Nota {
+  id                  String   @id @default(cuid())
+  leadId              String
+  contenido           String   @db.Text
+  createdAt           DateTime @default(now())
+
+  lead                Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("notas")
+}
+
+model Recordatorio {
+  id                  String   @id @default(cuid())
+  leadId              String
+  descripcion         String
+  fechaHora           DateTime
+  completado          Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  lead                Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([fechaHora])
+  @@map("recordatorios")
+}
